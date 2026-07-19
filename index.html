@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>On This — Speak For One Minute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --stage-black:#14110d;
+    --stage-black-2:#1b1712;
+    --card-charcoal:#241f18;
+    --card-charcoal-2:#2c2519;
+    --spotlight-cream:#f3e6c8;
+    --brass:#c79a3c;
+    --brass-dim:#8c6f2c;
+    --on-air-red:#c1443c;
+    --go-green:#4c8b5b;
+    --caution-amber:#d6a93a;
+    --ink:#ede3ce;
+    --muted:#9c9082;
+    --muted-2:#6b6255;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100%;
+    background:
+      radial-gradient(ellipse 900px 600px at 50% -10%, rgba(199,154,60,0.16), transparent 60%),
+      radial-gradient(ellipse 1200px 800px at 50% 40%, var(--stage-black-2), var(--stage-black) 70%);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 20px 48px;
+    overflow-x:hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Header ---------- */
+  .eyebrow{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--brass);
+    font-weight:600;
+    margin-bottom:10px;
+    opacity:0.9;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:clamp(28px, 5vw, 44px);
+    margin:0 0 6px;
+    text-align:center;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:14.5px;
+    text-align:center;
+    max-width:440px;
+    line-height:1.5;
+    margin-bottom:34px;
+  }
+
+  /* ---------- Stage ---------- */
+  .stage{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .onair-wrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+    height:20px;
+  }
+  .onair{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.2em;
+    padding:5px 12px;
+    border-radius:3px;
+    border:1.5px solid var(--muted-2);
+    color:var(--muted-2);
+    transition:all 0.35s ease;
+  }
+  .onair.live{
+    border-color:var(--on-air-red);
+    color:var(--spotlight-cream);
+    background:var(--on-air-red);
+    box-shadow:0 0 22px rgba(193,68,60,0.55), 0 0 4px rgba(193,68,60,0.8);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 22px rgba(193,68,60,0.55), 0 0 4px rgba(193,68,60,0.8);}
+    50%{box-shadow:0 0 32px rgba(193,68,60,0.75), 0 0 8px rgba(193,68,60,1);}
+  }
+
+  /* ---------- Cue card ---------- */
+  .card-slot{
+    perspective:1400px;
+    width:100%;
+    max-width:380px;
+    aspect-ratio:5/4;
+    margin-bottom:26px;
+  }
+  .card{
+    position:relative;
+    width:100%;
+    height:100%;
+    transform-style:preserve-3d;
+    transition:transform 0.55s cubic-bezier(.2,.75,.3,1.15);
+  }
+  .card.flip{ transform: rotateY(180deg); }
+
+  .face{
+    position:absolute;
+    inset:0;
+    backface-visibility:hidden;
+    border-radius:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:28px 26px;
+    text-align:center;
+  }
+  .face.front{
+    background:
+      repeating-linear-gradient(135deg, rgba(199,154,60,0.05) 0 2px, transparent 2px 14px),
+      linear-gradient(160deg, var(--card-charcoal-2), var(--card-charcoal));
+    border:1.5px solid rgba(199,154,60,0.35);
+    box-shadow: 0 18px 50px -12px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.25);
+  }
+  .face.front .mark{
+    font-family:'Fraunces', serif;
+    font-size:56px;
+    color:var(--brass-dim);
+    opacity:0.5;
+  }
+  .face.front .hint{
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+    letter-spacing:0.04em;
+  }
+
+  .face.back{
+    transform:rotateY(180deg);
+    background:linear-gradient(160deg, var(--card-charcoal-2), var(--card-charcoal));
+    border:1.5px solid rgba(199,154,60,0.45);
+    box-shadow: 0 18px 50px -12px rgba(0,0,0,0.7), inset 0 0 50px rgba(0,0,0,0.3);
+  }
+  .category-tag{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:16px;
+  }
+  .topic-text{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(26px, 6.4vw, 34px);
+    line-height:1.2;
+    color:var(--spotlight-cream);
+  }
+  .card-index{
+    position:absolute;
+    bottom:14px;
+    right:18px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted-2);
+  }
+
+  /* ---------- Timer ---------- */
+  .timer-wrap{
+    position:relative;
+    width:190px;
+    height:190px;
+    margin-bottom:26px;
+  }
+  svg.ring{
+    width:100%;
+    height:100%;
+    transform:rotate(-90deg);
+  }
+  .ring-track{
+    fill:none;
+    stroke:rgba(255,255,255,0.06);
+    stroke-width:8;
+  }
+  .ring-progress{
+    fill:none;
+    stroke-width:8;
+    stroke-linecap:round;
+    stroke:var(--go-green);
+    transition:stroke-dashoffset 1s linear, stroke 0.4s ease;
+  }
+  .timer-center{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+  .timer-digits{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:38px;
+    letter-spacing:0.02em;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .timer-label{
+    font-size:10.5px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--muted-2);
+    margin-top:4px;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex;
+    gap:12px;
+    width:100%;
+    max-width:380px;
+  }
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    border-radius:7px;
+    padding:14px 18px;
+    cursor:pointer;
+    border:1.5px solid transparent;
+    transition:transform 0.12s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    flex:1;
+  }
+  button:active{ transform:scale(0.97); }
+  button:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:2px;
+  }
+  button:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+  }
+
+  .btn-draw{
+    background:transparent;
+    border-color:var(--muted-2);
+    color:var(--ink);
+  }
+  .btn-draw:not(:disabled):hover{ border-color:var(--brass); color:var(--brass); }
+
+  .btn-primary{
+    background:var(--brass);
+    color:var(--stage-black);
+    border-color:var(--brass);
+  }
+  .btn-primary:not(:disabled):hover{ background:#dcae4a; }
+  .btn-primary.stop{
+    background:var(--on-air-red);
+    border-color:var(--on-air-red);
+    color:var(--spotlight-cream);
+  }
+  .btn-primary.stop:not(:disabled):hover{ background:#d65b52; }
+
+  footer{
+    margin-top:36px;
+    font-size:12px;
+    color:var(--muted-2);
+    text-align:center;
+    max-width:380px;
+    line-height:1.6;
+  }
+  footer kbd{
+    font-family:'JetBrains Mono', monospace;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:4px;
+    padding:1px 6px;
+    font-size:11px;
+  }
+
+  .flash{
+    animation:flashfade 0.9s ease-out;
+  }
+  @keyframes flashfade{
+    0%{ box-shadow:0 0 0 6px rgba(193,68,60,0.5), 0 18px 50px -12px rgba(0,0,0,0.7); }
+    100%{ box-shadow:0 18px 50px -12px rgba(0,0,0,0.7); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">Table Topics · Solo Practice</div>
+  <h1>Speak On This</h1>
+  <p class="sub">Draw a topic. Hit start. Talk for sixty seconds without stopping — no notes, no prep. That's the whole drill.</p>
+
+  <div class="stage">
+    <div class="onair-wrap">
+      <div class="onair" id="onair">OFF AIR</div>
+    </div>
+
+    <div class="card-slot">
+      <div class="card" id="card">
+        <div class="face front">
+          <div class="mark">”</div>
+          <div class="hint">Draw a topic to begin</div>
+        </div>
+        <div class="face back">
+          <div class="category-tag" id="categoryTag">CATEGORY</div>
+          <div class="topic-text" id="topicText">Topic goes here</div>
+          <div class="card-index" id="cardIndex"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timer-wrap">
+      <svg class="ring" viewBox="0 0 190 190">
+        <circle class="ring-track" cx="95" cy="95" r="84"></circle>
+        <circle class="ring-progress" id="ringProgress" cx="95" cy="95" r="84"
+                stroke-dasharray="527.8" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="timer-center">
+        <div class="timer-digits" id="timerDigits">1:00</div>
+        <div class="timer-label" id="timerLabel">ready</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-draw" id="drawBtn">Draw topic</button>
+      <button class="btn-primary" id="startBtn" disabled>Start speaking</button>
+    </div>
+  </div>
+
+  <footer>
+    <span id="deckCount"></span> topics in the deck, categories mixed in.<br>
+    <kbd>Space</kbd> draw a new topic · <kbd>Enter</kbd> start / stop
+  </footer>
+
+<script>
+(function(){
+  const TOPICS = [
+    ["Everyday","The perfect Sunday"],["Everyday","My morning routine"],["Everyday","A meal I'd defend"],
+    ["Everyday","Traffic and patience"],["Everyday","The last text I sent"],["Everyday","Grocery shopping habits"],
+    ["Everyday","My phone wallpaper"],["Everyday","Waiting rooms"],["Everyday","The best excuse"],
+    ["Everyday","Lost and found"],["Everyday","A skill I fake"],["Everyday","My go-to small talk"],
+    ["Opinion","Cats versus dogs"],["Opinion","Pineapple on pizza"],["Opinion","Is cereal soup"],
+    ["Opinion","Remote work forever"],["Opinion","Social media is good"],["Opinion","Sports are overrated"],
+    ["Opinion","Money can't buy happiness"],["Opinion","Honesty over kindness"],["Opinion","Cities beat small towns"],
+    ["Opinion","AI will help us"],["Opinion","Handwriting still matters"],["Opinion","Early birds win"],
+    ["Hypothetical","If I ruled the world"],["Hypothetical","One year off work"],["Hypothetical","No internet for a month"],
+    ["Hypothetical","A superpower I'd regret"],["Hypothetical","Trading places with a stranger"],
+    ["Hypothetical","If animals could talk"],["Hypothetical","Life without money"],["Hypothetical","A second sun"],
+    ["Hypothetical","Shrinking to insect size"],["Hypothetical","Time travel, once"],["Hypothetical","Living underwater"],
+    ["Nostalgia","My first job"],["Nostalgia","A childhood fear"],["Nostalgia","The best birthday"],
+    ["Nostalgia","A teacher I remember"],["Nostalgia","My first phone"],["Nostalgia","A game we invented"],
+    ["Nostalgia","The old neighborhood"],["Nostalgia","A song from school"],["Nostalgia","My first heartbreak"],
+    ["Nostalgia","A trip that stuck"],["Nostalgia","Handwritten letters"],
+    ["Abstract","What makes a home"],["Abstract","The value of boredom"],["Abstract","Defining success"],
+    ["Abstract","Silence versus noise"],["Abstract","What courage looks like"],["Abstract","The weight of habits"],
+    ["Abstract","Luck versus effort"],["Abstract","What we owe strangers"],["Abstract","The shape of time"],
+    ["Abstract","Comfort versus growth"],["Abstract","What makes art good"],
+    ["Storytelling","A stranger who helped me"],["Storytelling","The best mistake"],["Storytelling","A plan gone wrong"],
+    ["Storytelling","The bravest thing I did"],["Storytelling","A lesson from losing"],["Storytelling","A promise I kept"],
+    ["Storytelling","The longest day"],["Storytelling","A risk that paid off"],["Storytelling","Getting lost somewhere new"],
+    ["Storytelling","A gift I still remember"],
+    ["Hot take","Small talk is underrated"],["Hot take","Meetings should be shorter"],
+    ["Hot take","Everyone should learn to cook"],["Hot take","Reality TV is misunderstood"],
+    ["Hot take","Nobody reads the instructions"],["Hot take","Silence is a skill"],
+    ["Hot take","Overnight success is a myth"],["Hot take","Multitasking is a lie"],
+    ["Hot take","Everyone needs a hobby"],["Hot take","Comfort zones are useful"],
+    ["Describe","Describe the color blue"],["Describe","Describe an ideal city"],
+    ["Describe","Describe your dream job"],["Describe","Describe a perfect stranger"],
+    ["Describe","Describe silence"],["Describe","Describe rain from memory"],
+    ["Describe","Describe your morning coffee"],["Describe","Describe an old photograph"],
+    ["Describe","Describe a good leader"],["Describe","Describe a busy market"],
+    ["Would you rather","Fame or wealth"],["Would you rather","Fly or read minds"],
+    ["Would you rather","No weekends or no vacations"],["Would you rather","One meal forever"],
+    ["Would you rather","Always early or always late"],["Would you rather","Perfect memory or clean slate"],
+    ["Would you rather","City life or village life"],["Would you rather","Talk to animals or plants"],
+    ["Philosophical","Does free will exist"],["Philosophical","What is truth"],["Philosophical","Nature versus nurture"],
+    ["Philosophical","The meaning of life"],["Philosophical","Do ends justify means"],["Philosophical","What defines identity"],
+    ["Philosophical","Is knowledge power"],["Philosophical","Perception versus reality"],["Philosophical","Mind versus matter"],
+    ["Philosophical","What makes something fair"],["Philosophical","Is suffering necessary"],["Philosophical","Can machines think"],
+    ["Philosophical","What we owe the future"],["Philosophical","Is morality universal"],["Philosophical","What makes a self"],
+    ["Political","Should voting be mandatory"],["Political","Term limits for leaders"],["Political","Limits on free speech"],
+    ["Political","The role of government"],["Political","Local versus national politics"],["Political","Universal basic income"],
+    ["Political","Should college be free"],["Political","Climate policy tradeoffs"],["Political","Should voting age change"],
+    ["Political","Media's role in politics"],["Political","Should the rich pay more"],["Political","Direct democracy versus representatives"],
+    ["Political","Immigration policy debate"],["Political","Privacy versus security"],["Political","Should protest be disruptive"],
+    ["Easy","My favorite color"],["Easy","A fruit I love"],["Easy","My favorite season"],
+    ["Easy","Weekend plans"],["Easy","My favorite animal"],["Easy","A song I like"],
+    ["Easy","My favorite snack"],["Easy","Favorite time of day"],["Easy","A place I love"],
+    ["Easy","My favorite subject"],["Easy","Best ice cream flavor"],["Easy","A hobby I enjoy"],
+    ["Easy","My favorite holiday"],["Easy","Favorite type of weather"],["Easy","A book I liked"]
+  ];
+
+  const drawBtn = document.getElementById('drawBtn');
+  const startBtn = document.getElementById('startBtn');
+  const card = document.getElementById('card');
+  const categoryTag = document.getElementById('categoryTag');
+  const topicText = document.getElementById('topicText');
+  const cardIndex = document.getElementById('cardIndex');
+  const onair = document.getElementById('onair');
+  const ringProgress = document.getElementById('ringProgress');
+  const timerDigits = document.getElementById('timerDigits');
+  const timerLabel = document.getElementById('timerLabel');
+  const deckCount = document.getElementById('deckCount');
+
+  deckCount.textContent = TOPICS.length;
+
+  const CIRC = 2 * Math.PI * 84;
+  ringProgress.setAttribute('stroke-dasharray', CIRC.toFixed(1));
+
+  const DURATION = 60;
+  let secondsLeft = DURATION;
+  let timerId = null;
+  let running = false;
+  let history = [];
+  let drawn = 0;
+  let audioCtx = null;
+
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function beep(freq, duration, delay=0, type='sine', gainVal=0.18){
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = gainVal;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const t0 = audioCtx.currentTime + delay;
+    osc.start(t0);
+    gain.gain.setValueAtTime(gainVal, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  function pickTopic(){
+    let pool = TOPICS.map((t,i)=>i).filter(i => !history.includes(i));
+    if(pool.length === 0){ history = []; pool = TOPICS.map((t,i)=>i); }
+    const idx = pool[Math.floor(Math.random()*pool.length)];
+    history.push(idx);
+    if(history.length > 20) history.shift();
+    return idx;
+  }
+
+  function drawTopic(){
+    if(running) return;
+    ensureAudio();
+    const idx = pickTopic();
+    const [cat, text] = TOPICS[idx];
+    drawn++;
+    categoryTag.textContent = cat;
+    topicText.textContent = text;
+    cardIndex.textContent = '#' + String(drawn).padStart(3,'0');
+
+    card.classList.remove('flip');
+    void card.offsetWidth;
+    requestAnimationFrame(()=>{ card.classList.add('flip'); });
+
+    resetTimer();
+    startBtn.disabled = false;
+  }
+
+  function formatTime(s){
+    const m = Math.floor(s/60);
+    const sec = s % 60;
+    return m + ':' + String(sec).padStart(2,'0');
+  }
+
+  function setRing(s){
+    const frac = s / DURATION;
+    ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
+    let color = 'var(--go-green)';
+    let label = 'plenty of time';
+    if(DURATION - s >= 40 && DURATION - s < 55){ color = 'var(--caution-amber)'; label = 'wrap it up'; }
+    else if(DURATION - s >= 55){ color = 'var(--on-air-red)'; label = 'almost there'; }
+    else if(s === DURATION){ label = 'ready'; }
+    ringProgress.style.stroke = color;
+    timerLabel.textContent = running ? label : (s===DURATION ? 'ready' : 'paused');
+  }
+
+  function resetTimer(){
+    clearInterval(timerId);
+    running = false;
+    secondsLeft = DURATION;
+    timerDigits.textContent = formatTime(secondsLeft);
+    setRing(secondsLeft);
+    onair.textContent = 'OFF AIR';
+    onair.classList.remove('live');
+    startBtn.textContent = 'Start speaking';
+    startBtn.classList.remove('stop');
+    drawBtn.disabled = false;
+  }
+
+  function tick(){
+    secondsLeft--;
+    timerDigits.textContent = formatTime(secondsLeft);
+    setRing(secondsLeft);
+
+    const elapsed = DURATION - secondsLeft;
+    if(elapsed === 40 || elapsed === 50){ beep(740, 0.12, 0, 'triangle', 0.14); beep(740, 0.12, 0.16, 'triangle', 0.14); }
+
+    if(secondsLeft <= 0){
+      clearInterval(timerId);
+      running = false;
+      beep(220, 0.5, 0, 'square', 0.16);
+      beep(165, 0.6, 0.08, 'square', 0.14);
+      timerLabel.textContent = "time's up";
+      onair.textContent = 'TIME';
+      onair.classList.remove('live');
+      startBtn.textContent = 'Start speaking';
+      startBtn.classList.remove('stop');
+      drawBtn.disabled = false;
+      card.parentElement.classList.add('flash');
+      setTimeout(()=>card.parentElement.classList.remove('flash'), 900);
+    }
+  }
+
+  function startTimer(){
+    ensureAudio();
+    running = true;
+    beep(520, 0.15, 0, 'sine', 0.16);
+    onair.textContent = 'ON AIR';
+    onair.classList.add('live');
+    startBtn.textContent = 'Stop';
+    startBtn.classList.add('stop');
+    drawBtn.disabled = true;
+    setRing(secondsLeft);
+    timerId = setInterval(tick, 1000);
+  }
+
+  function stopTimer(){
+    clearInterval(timerId);
+    running = false;
+    onair.textContent = 'PAUSED';
+    onair.classList.remove('live');
+    startBtn.textContent = 'Resume';
+    startBtn.classList.remove('stop');
+    drawBtn.disabled = false;
+    setRing(secondsLeft);
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    if(startBtn.disabled) return;
+    if(secondsLeft <= 0){ resetTimer(); return; }
+    if(running){ stopTimer(); } else { startTimer(); }
+  });
+
+  drawBtn.addEventListener('click', drawTopic);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); drawTopic(); }
+    if(e.code === 'Enter'){ e.preventDefault(); if(!startBtn.disabled) startBtn.click(); }
+  });
+
+  setRing(DURATION);
+})();
+</script>
+</body>
+</html>
