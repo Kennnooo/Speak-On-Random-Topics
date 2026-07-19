@@ -109,9 +109,57 @@
     box-shadow:0 0 22px rgba(193,68,60,0.55), 0 0 4px rgba(193,68,60,0.8);
     animation:pulse 1.6s ease-in-out infinite;
   }
+  .onair.prep{
+    border-color:var(--caution-amber);
+    color:var(--stage-black);
+    background:var(--caution-amber);
+    box-shadow:0 0 18px rgba(214,169,58,0.45);
+  }
   @keyframes pulse{
     0%,100%{box-shadow:0 0 22px rgba(193,68,60,0.55), 0 0 4px rgba(193,68,60,0.8);}
     50%{box-shadow:0 0 32px rgba(193,68,60,0.75), 0 0 8px rgba(193,68,60,1);}
+  }
+
+  /* ---------- Prep panel ---------- */
+  .prep-panel{
+    width:100%;
+    max-width:380px;
+    margin:-8px 0 24px;
+    display:none;
+    border-top:1px solid rgba(255,255,255,0.08);
+    padding-top:14px;
+  }
+  .prep-panel.show{ display:block; }
+  .prep-step{
+    display:flex;
+    gap:12px;
+    padding:8px 6px;
+    border-radius:8px;
+    opacity:0.45;
+    transition:opacity 0.35s ease, background 0.35s ease;
+  }
+  .prep-step.active{
+    opacity:1;
+    background:rgba(199,154,60,0.09);
+  }
+  .prep-num{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    color:var(--brass);
+    font-size:13px;
+    min-width:18px;
+    padding-top:1px;
+  }
+  .prep-title{
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--ink);
+  }
+  .prep-hint{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:2px;
+    line-height:1.4;
   }
 
   /* ---------- Cue card ---------- */
@@ -319,7 +367,7 @@
 
   <div class="eyebrow">Table Topics · Solo Practice</div>
   <h1>Speak On This</h1>
-  <p class="sub">Draw a topic. Hit start. Talk for sixty seconds without stopping — no notes, no prep. That's the whole drill.</p>
+  <p class="sub">Draw a topic. Take sixty seconds to think it through. Then talk for sixty seconds without stopping. That's the whole drill.</p>
 
   <div class="stage">
     <div class="onair-wrap">
@@ -336,6 +384,30 @@
           <div class="category-tag" id="categoryTag">CATEGORY</div>
           <div class="topic-text" id="topicText">Topic goes here</div>
           <div class="card-index" id="cardIndex"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prep-panel" id="prepPanel">
+      <div class="prep-step" data-step="0">
+        <div class="prep-num">1</div>
+        <div>
+          <div class="prep-title">What / Why</div>
+          <div class="prep-hint">Define it plainly. Why does it exist, or why does it matter?</div>
+        </div>
+      </div>
+      <div class="prep-step" data-step="1">
+        <div class="prep-num">2</div>
+        <div>
+          <div class="prep-title">Weigh it</div>
+          <div class="prep-hint">One good thing about it. One bad thing. Where's the tension?</div>
+        </div>
+      </div>
+      <div class="prep-step" data-step="2">
+        <div class="prep-num">3</div>
+        <div>
+          <div class="prep-title">Land it</div>
+          <div class="prep-hint">What are you grateful for here — or what's your takeaway?</div>
         </div>
       </div>
     </div>
@@ -432,16 +504,21 @@
   const timerDigits = document.getElementById('timerDigits');
   const timerLabel = document.getElementById('timerLabel');
   const deckCount = document.getElementById('deckCount');
+  const prepPanel = document.getElementById('prepPanel');
+  const prepSteps = Array.from(document.querySelectorAll('.prep-step'));
 
   deckCount.textContent = TOPICS.length;
 
   const CIRC = 2 * Math.PI * 84;
   ringProgress.setAttribute('stroke-dasharray', CIRC.toFixed(1));
 
-  const DURATION = 60;
-  let secondsLeft = DURATION;
+  const PREP_DURATION = 60;
+  const SPEAK_DURATION = 60;
+  const PREP_LABELS = ['what / why', 'weigh it', 'land it'];
+
+  let mode = 'idle'; // idle | drawn | prepping | readyToSpeak | speaking | paused | speakDone
+  let secondsLeft = SPEAK_DURATION;
   let timerId = null;
-  let running = false;
   let history = [];
   let drawn = 0;
   let audioCtx = null;
@@ -478,9 +555,83 @@
     return idx;
   }
 
+  function formatTime(s){
+    const m = Math.floor(s/60);
+    const sec = s % 60;
+    return m + ':' + String(sec).padStart(2,'0');
+  }
+
+  function setSpeakRing(s){
+    const frac = s / SPEAK_DURATION;
+    ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
+    let color = 'var(--go-green)';
+    if(SPEAK_DURATION - s >= 40 && SPEAK_DURATION - s < 55){ color = 'var(--caution-amber)'; }
+    else if(SPEAK_DURATION - s >= 55){ color = 'var(--on-air-red)'; }
+    ringProgress.style.stroke = color;
+  }
+
+  function setPrepRing(s){
+    const frac = s / PREP_DURATION;
+    ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
+    ringProgress.style.stroke = 'var(--brass)';
+  }
+
+  function setPrepStep(elapsed){
+    const idx = Math.min(2, Math.floor(elapsed / (PREP_DURATION/3)));
+    prepSteps.forEach((el,i)=> el.classList.toggle('active', i===idx));
+    if(mode === 'prepping') timerLabel.textContent = PREP_LABELS[idx];
+  }
+
+  function updateUI(){
+    prepPanel.classList.toggle('show', mode !== 'idle');
+    drawBtn.disabled = ['prepping','readyToSpeak','speaking','paused'].includes(mode);
+    onair.classList.remove('live','prep');
+
+    if(mode === 'idle' || mode === 'drawn'){
+      startBtn.disabled = (mode === 'idle');
+      startBtn.textContent = 'Prepare (1 min)';
+      startBtn.classList.remove('stop');
+      onair.textContent = 'OFF AIR';
+      timerLabel.textContent = 'ready';
+      prepSteps.forEach(el => el.classList.remove('active'));
+    } else if(mode === 'prepping'){
+      startBtn.disabled = false;
+      startBtn.textContent = 'Skip to speaking';
+      startBtn.classList.remove('stop');
+      onair.textContent = 'PREPPING';
+      onair.classList.add('prep');
+    } else if(mode === 'readyToSpeak'){
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start speaking';
+      startBtn.classList.remove('stop');
+      onair.textContent = 'READY';
+      timerLabel.textContent = 'ready';
+      prepSteps.forEach(el => el.classList.remove('active'));
+    } else if(mode === 'speaking'){
+      startBtn.disabled = false;
+      startBtn.textContent = 'Stop';
+      startBtn.classList.add('stop');
+      onair.textContent = 'ON AIR';
+      onair.classList.add('live');
+    } else if(mode === 'paused'){
+      startBtn.disabled = false;
+      startBtn.textContent = 'Resume';
+      startBtn.classList.remove('stop');
+      onair.textContent = 'PAUSED';
+      timerLabel.textContent = 'paused';
+    } else if(mode === 'speakDone'){
+      startBtn.disabled = true;
+      startBtn.textContent = 'Draw a new topic';
+      startBtn.classList.remove('stop');
+      onair.textContent = 'TIME';
+      timerLabel.textContent = "time's up";
+    }
+  }
+
   function drawTopic(){
-    if(running) return;
+    if(['prepping','speaking'].includes(mode)) return;
     ensureAudio();
+    clearInterval(timerId);
     const idx = pickTopic();
     const [cat, text] = TOPICS[idx];
     drawn++;
@@ -492,93 +643,93 @@
     void card.offsetWidth;
     requestAnimationFrame(()=>{ card.classList.add('flip'); });
 
-    resetTimer();
-    startBtn.disabled = false;
-  }
-
-  function formatTime(s){
-    const m = Math.floor(s/60);
-    const sec = s % 60;
-    return m + ':' + String(sec).padStart(2,'0');
-  }
-
-  function setRing(s){
-    const frac = s / DURATION;
-    ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
-    let color = 'var(--go-green)';
-    let label = 'plenty of time';
-    if(DURATION - s >= 40 && DURATION - s < 55){ color = 'var(--caution-amber)'; label = 'wrap it up'; }
-    else if(DURATION - s >= 55){ color = 'var(--on-air-red)'; label = 'almost there'; }
-    else if(s === DURATION){ label = 'ready'; }
-    ringProgress.style.stroke = color;
-    timerLabel.textContent = running ? label : (s===DURATION ? 'ready' : 'paused');
-  }
-
-  function resetTimer(){
-    clearInterval(timerId);
-    running = false;
-    secondsLeft = DURATION;
+    secondsLeft = SPEAK_DURATION;
     timerDigits.textContent = formatTime(secondsLeft);
-    setRing(secondsLeft);
-    onair.textContent = 'OFF AIR';
-    onair.classList.remove('live');
-    startBtn.textContent = 'Start speaking';
-    startBtn.classList.remove('stop');
-    drawBtn.disabled = false;
+    setSpeakRing(secondsLeft);
+    mode = 'drawn';
+    updateUI();
   }
 
-  function tick(){
+  function startPrep(){
+    ensureAudio();
+    beep(440, 0.12, 0, 'sine', 0.14);
+    mode = 'prepping';
+    secondsLeft = PREP_DURATION;
+    timerDigits.textContent = formatTime(secondsLeft);
+    setPrepRing(secondsLeft);
+    setPrepStep(0);
+    updateUI();
+    timerId = setInterval(prepTick, 1000);
+  }
+
+  function prepTick(){
     secondsLeft--;
     timerDigits.textContent = formatTime(secondsLeft);
-    setRing(secondsLeft);
+    setPrepRing(secondsLeft);
+    setPrepStep(PREP_DURATION - secondsLeft);
+    if(secondsLeft <= 0){
+      clearInterval(timerId);
+      beep(600, 0.15, 0, 'sine', 0.15); beep(760, 0.18, 0.14, 'sine', 0.15);
+      goReadyToSpeak();
+    }
+  }
 
-    const elapsed = DURATION - secondsLeft;
+  function finishPrepEarly(){
+    clearInterval(timerId);
+    goReadyToSpeak();
+  }
+
+  function goReadyToSpeak(){
+    mode = 'readyToSpeak';
+    secondsLeft = SPEAK_DURATION;
+    timerDigits.textContent = formatTime(secondsLeft);
+    setSpeakRing(secondsLeft);
+    updateUI();
+  }
+
+  function speakTick(){
+    secondsLeft--;
+    timerDigits.textContent = formatTime(secondsLeft);
+    setSpeakRing(secondsLeft);
+
+    const elapsed = SPEAK_DURATION - secondsLeft;
+    timerLabel.textContent = elapsed < 40 ? 'plenty of time' : (elapsed < 55 ? 'wrap it up' : 'almost there');
     if(elapsed === 40 || elapsed === 50){ beep(740, 0.12, 0, 'triangle', 0.14); beep(740, 0.12, 0.16, 'triangle', 0.14); }
 
     if(secondsLeft <= 0){
       clearInterval(timerId);
-      running = false;
       beep(220, 0.5, 0, 'square', 0.16);
       beep(165, 0.6, 0.08, 'square', 0.14);
-      timerLabel.textContent = "time's up";
-      onair.textContent = 'TIME';
-      onair.classList.remove('live');
-      startBtn.textContent = 'Start speaking';
-      startBtn.classList.remove('stop');
-      drawBtn.disabled = false;
+      mode = 'speakDone';
+      updateUI();
       card.parentElement.classList.add('flash');
       setTimeout(()=>card.parentElement.classList.remove('flash'), 900);
     }
   }
 
-  function startTimer(){
+  function startSpeaking(){
     ensureAudio();
-    running = true;
     beep(520, 0.15, 0, 'sine', 0.16);
-    onair.textContent = 'ON AIR';
-    onair.classList.add('live');
-    startBtn.textContent = 'Stop';
-    startBtn.classList.add('stop');
-    drawBtn.disabled = true;
-    setRing(secondsLeft);
-    timerId = setInterval(tick, 1000);
+    mode = 'speaking';
+    updateUI();
+    setSpeakRing(secondsLeft);
+    timerId = setInterval(speakTick, 1000);
   }
 
-  function stopTimer(){
+  function pauseSpeaking(){
     clearInterval(timerId);
-    running = false;
-    onair.textContent = 'PAUSED';
-    onair.classList.remove('live');
-    startBtn.textContent = 'Resume';
-    startBtn.classList.remove('stop');
-    drawBtn.disabled = false;
-    setRing(secondsLeft);
+    mode = 'paused';
+    updateUI();
+    setSpeakRing(secondsLeft);
   }
 
   startBtn.addEventListener('click', ()=>{
     if(startBtn.disabled) return;
-    if(secondsLeft <= 0){ resetTimer(); return; }
-    if(running){ stopTimer(); } else { startTimer(); }
+    if(mode === 'drawn'){ startPrep(); }
+    else if(mode === 'prepping'){ finishPrepEarly(); }
+    else if(mode === 'readyToSpeak'){ startSpeaking(); }
+    else if(mode === 'speaking'){ pauseSpeaking(); }
+    else if(mode === 'paused'){ startSpeaking(); }
   });
 
   drawBtn.addEventListener('click', drawTopic);
@@ -588,7 +739,7 @@
     if(e.code === 'Enter'){ e.preventDefault(); if(!startBtn.disabled) startBtn.click(); }
   });
 
-  setRing(DURATION);
+  updateUI();
 })();
 </script>
 </body>
