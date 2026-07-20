@@ -337,6 +337,24 @@
   }
   .btn-primary.stop:not(:disabled):hover{ background:#d65b52; }
 
+  .extend-row{
+    display:none;
+    gap:10px;
+    width:100%;
+    max-width:380px;
+    margin-top:10px;
+  }
+  .extend-row.show{ display:flex; }
+  .btn-extend{
+    flex:1;
+    background:transparent;
+    border-color:rgba(199,154,60,0.35);
+    color:var(--brass);
+    font-size:13px;
+    padding:9px 10px;
+  }
+  .btn-extend:hover{ border-color:var(--brass); background:rgba(199,154,60,0.08); }
+
   footer{
     margin-top:36px;
     font-size:12px;
@@ -435,6 +453,12 @@
       <button class="btn-draw" id="drawBtn">Draw topic</button>
       <button class="btn-primary" id="startBtn" disabled>Start speaking</button>
     </div>
+
+    <div class="extend-row" id="extendRow">
+      <button class="btn-extend" data-add="15">+15s</button>
+      <button class="btn-extend" data-add="30">+30s</button>
+      <button class="btn-extend" data-add="45">+45s</button>
+    </div>
   </div>
 
   <footer>
@@ -514,6 +538,8 @@
   const deckCount = document.getElementById('deckCount');
   const prepPanel = document.getElementById('prepPanel');
   const prepSteps = Array.from(document.querySelectorAll('.prep-step'));
+  const extendRow = document.getElementById('extendRow');
+  const extendBtns = Array.from(document.querySelectorAll('.btn-extend'));
 
   deckCount.textContent = TOPICS.length;
 
@@ -526,6 +552,8 @@
 
   let mode = 'idle'; // idle | drawn | prepping | readyToSpeak | speaking | paused | speakDone
   let secondsLeft = SPEAK_DURATION;
+  let prepTotal = PREP_DURATION;
+  let speakTotal = SPEAK_DURATION;
   let timerId = null;
   let history = [];
   let drawn = 0;
@@ -570,34 +598,49 @@
   }
 
   function setSpeakRing(s){
-    const frac = s / SPEAK_DURATION;
+    const frac = Math.max(0, Math.min(1, s / speakTotal));
     ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
     let color = 'var(--go-green)';
-    if(SPEAK_DURATION - s >= 40 && SPEAK_DURATION - s < 55){ color = 'var(--caution-amber)'; }
-    else if(SPEAK_DURATION - s >= 55){ color = 'var(--on-air-red)'; }
+    if(s <= 20 && s > 10){ color = 'var(--caution-amber)'; }
+    else if(s <= 10){ color = 'var(--on-air-red)'; }
     ringProgress.style.stroke = color;
   }
 
   function setPrepRing(s){
-    const frac = s / PREP_DURATION;
+    const frac = Math.max(0, Math.min(1, s / prepTotal));
     ringProgress.setAttribute('stroke-dashoffset', (CIRC * (1-frac)).toFixed(1));
     ringProgress.style.stroke = 'var(--brass)';
   }
 
   function setPrepStep(elapsed){
-    const idx = Math.min(2, Math.floor(elapsed / (PREP_DURATION/3)));
+    const idx = Math.min(2, Math.floor(elapsed / (prepTotal/3)));
     prepSteps.forEach((el,i)=> el.classList.toggle('active', i===idx));
     if(mode === 'prepping') timerLabel.textContent = PREP_LABELS[idx];
+  }
+
+  function extendTime(sec){
+    if(mode === 'drawn' || mode === 'prepping'){
+      prepTotal += sec;
+      secondsLeft += sec;
+      timerDigits.textContent = formatTime(secondsLeft);
+      setPrepRing(secondsLeft);
+    } else if(mode === 'readyToSpeak' || mode === 'speaking' || mode === 'paused'){
+      speakTotal += sec;
+      secondsLeft += sec;
+      timerDigits.textContent = formatTime(secondsLeft);
+      setSpeakRing(secondsLeft);
+    }
   }
 
   function updateUI(){
     prepPanel.classList.toggle('show', mode !== 'idle');
     drawBtn.disabled = ['prepping','readyToSpeak','speaking','paused'].includes(mode);
+    extendRow.classList.toggle('show', mode !== 'idle' && mode !== 'speakDone');
     onair.classList.remove('live','prep');
 
     if(mode === 'idle' || mode === 'drawn'){
       startBtn.disabled = (mode === 'idle');
-      startBtn.textContent = 'Prepare (1 min)';
+      startBtn.textContent = 'Prepare';
       startBtn.classList.remove('stop');
       onair.textContent = 'OFF AIR';
       timerLabel.textContent = 'ready';
@@ -651,9 +694,11 @@
     void card.offsetWidth;
     requestAnimationFrame(()=>{ card.classList.add('flip'); });
 
-    secondsLeft = SPEAK_DURATION;
+    secondsLeft = PREP_DURATION;
+    prepTotal = PREP_DURATION;
+    speakTotal = SPEAK_DURATION;
     timerDigits.textContent = formatTime(secondsLeft);
-    setSpeakRing(secondsLeft);
+    setPrepRing(secondsLeft);
     mode = 'drawn';
     updateUI();
   }
@@ -662,7 +707,6 @@
     ensureAudio();
     beep(440, 0.12, 0, 'sine', 0.14);
     mode = 'prepping';
-    secondsLeft = PREP_DURATION;
     timerDigits.textContent = formatTime(secondsLeft);
     setPrepRing(secondsLeft);
     setPrepStep(0);
@@ -674,7 +718,7 @@
     secondsLeft--;
     timerDigits.textContent = formatTime(secondsLeft);
     setPrepRing(secondsLeft);
-    setPrepStep(PREP_DURATION - secondsLeft);
+    setPrepStep(prepTotal - secondsLeft);
     if(secondsLeft <= 0){
       clearInterval(timerId);
       beep(600, 0.15, 0, 'sine', 0.15); beep(760, 0.18, 0.14, 'sine', 0.15);
@@ -689,6 +733,7 @@
 
   function goReadyToSpeak(){
     mode = 'readyToSpeak';
+    speakTotal = SPEAK_DURATION;
     secondsLeft = SPEAK_DURATION;
     timerDigits.textContent = formatTime(secondsLeft);
     setSpeakRing(secondsLeft);
@@ -700,9 +745,8 @@
     timerDigits.textContent = formatTime(secondsLeft);
     setSpeakRing(secondsLeft);
 
-    const elapsed = SPEAK_DURATION - secondsLeft;
-    timerLabel.textContent = elapsed < 40 ? 'plenty of time' : (elapsed < 55 ? 'wrap it up' : 'almost there');
-    if(elapsed === 40 || elapsed === 50){ beep(740, 0.12, 0, 'triangle', 0.14); beep(740, 0.12, 0.16, 'triangle', 0.14); }
+    timerLabel.textContent = secondsLeft > 20 ? 'plenty of time' : (secondsLeft > 10 ? 'wrap it up' : 'almost there');
+    if(secondsLeft === 20 || secondsLeft === 10){ beep(740, 0.12, 0, 'triangle', 0.14); beep(740, 0.12, 0.16, 'triangle', 0.14); }
 
     if(secondsLeft <= 0){
       clearInterval(timerId);
@@ -741,6 +785,10 @@
   });
 
   drawBtn.addEventListener('click', drawTopic);
+
+  extendBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=> extendTime(parseInt(btn.dataset.add, 10)));
+  });
 
   document.addEventListener('keydown', (e)=>{
     if(e.code === 'Space'){ e.preventDefault(); drawTopic(); }
