@@ -24,4 +24,9 @@ Other details:
 
 ---
 
+## LICENSE
+This project is under MIT License
+
+---
+
 Made by Aarav
