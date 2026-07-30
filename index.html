@@ -71,8 +71,51 @@
     text-align:center;
     max-width:440px;
     line-height:1.5;
-    margin-bottom:34px;
+    margin-bottom:26px;
   }
+
+  /* ---------- Mode toggle ---------- */
+  .mode-toggle{
+    display:inline-flex;
+    gap:4px;
+    padding:5px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.09);
+    margin-bottom:30px;
+    transition:opacity 0.25s ease;
+  }
+  .mode-toggle.locked{
+    opacity:0.4;
+    pointer-events:none;
+  }
+  .mode-btn{
+    flex:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 18px;
+    border-radius:999px;
+    border:none;
+    background:transparent;
+    color:var(--muted);
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    transition:background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .mode-btn .mode-icon{
+    font-size:15px;
+    line-height:1;
+  }
+  .mode-btn:hover{ color:var(--ink); }
+  .mode-btn.active{
+    background:linear-gradient(135deg,#ea9a52,#c46f2c);
+    color:#1c1409;
+    box-shadow:0 4px 16px rgba(196,111,44,0.35);
+  }
+  .mode-btn.active:hover{ color:#1c1409; }
 
   /* ---------- Stage ---------- */
   .stage{
@@ -231,6 +274,35 @@
     font-size:clamp(26px, 6.4vw, 34px);
     line-height:1.2;
     color:var(--spotlight-cream);
+  }
+  .topic-text.spin-tick{
+    animation: spinFlicker 0.16s ease-out;
+  }
+  @keyframes spinFlicker{
+    0%{ opacity:0.15; filter:blur(5px); transform:translateY(-3px) scale(0.98); }
+    100%{ opacity:1; filter:blur(0); transform:translateY(0) scale(1); }
+  }
+  .topic-text.landed{
+    animation: landPunch 0.55s cubic-bezier(.22,.8,.28,1.25);
+  }
+  @keyframes landPunch{
+    0%{ transform:scale(0.9); filter:blur(2px); opacity:0.5; }
+    55%{ transform:scale(1.05); filter:blur(0); opacity:1; }
+    100%{ transform:scale(1); }
+  }
+  .category-tag.spin-tick{
+    animation: tagFlicker 0.16s ease-out;
+  }
+  @keyframes tagFlicker{
+    0%{ opacity:0.2; }
+    100%{ opacity:1; }
+  }
+  .card.spinning .face.back{
+    animation: spinGlow 0.5s ease-in-out infinite;
+  }
+  @keyframes spinGlow{
+    0%,100%{ box-shadow: 0 18px 50px -12px rgba(0,0,0,0.7), inset 0 0 50px rgba(0,0,0,0.3), 0 0 0 rgba(199,154,60,0); }
+    50%{ box-shadow: 0 18px 50px -12px rgba(0,0,0,0.7), inset 0 0 50px rgba(0,0,0,0.3), 0 0 28px rgba(199,154,60,0.4); }
   }
   .card-index{
     position:absolute;
@@ -394,6 +466,11 @@
   <h1>Speak On This</h1>
   <p class="sub">Draw a topic. Take sixty seconds to think it through. Then talk for sixty seconds without stopping. That's the whole drill.</p>
 
+  <div class="mode-toggle" id="modeToggle">
+    <button class="mode-btn active" id="modeOffCuff" data-mode="offcuff"><span class="mode-icon">🧠</span>Off the cuff</button>
+    <button class="mode-btn" id="modeDeepResearch" data-mode="deepresearch"><span class="mode-icon">🔍</span>Deep research</button>
+  </div>
+
   <div class="stage">
     <div class="onair-wrap">
       <div class="onair" id="onair">OFF AIR</div>
@@ -525,6 +602,24 @@
     ["Easy","My favorite holiday"],["Easy","Favorite type of weather"],["Easy","A book I liked"]
   ];
 
+  const DEEP_RESEARCH_TOPICS = [
+    ["Psychology","The Pareto principle"],["Psychology","Solomon's paradox"],["Psychology","The paradox of choice"],
+    ["Psychology","The Zeigarnik effect"],["Psychology","The Baader-Meinhof phenomenon"],["Physics","The double-slit experiment"],
+    ["Psychology","The Dunning-Kruger effect"],["Psychology","The bystander effect"],["Economics","The sunk cost fallacy"],
+    ["Psychology","The Barnum effect"],["Psychology","The mere-exposure effect"],["Philosophy","The trolley problem"],
+    ["Philosophy","The ship of Theseus"],["Physics","Schrödinger's cat"],["Physics","Quantum entanglement"],
+    ["Biology","CRISPR gene editing"],["Economics","The tragedy of the commons"],["Economics","Game theory basics"],
+    ["Psychology","Cognitive dissonance"],["Medicine","The placebo effect"],["Sociology","The broken windows theory"],
+    ["Sociology","Six degrees of separation"],["Psychology","The halo effect"],["Psychology","Confirmation bias"],
+    ["Economics","The Peter principle"],["Economics","The Diderot effect"],["Physics","The butterfly effect"],
+    ["Neuroscience","Neuroplasticity explained"],["Philosophy","The is-ought problem"],["Philosophy","Occam's razor"],
+    ["Mathematics","The Monty Hall problem"],["Mathematics","The birthday paradox"],["Astronomy","The Fermi paradox"],
+    ["Media","The Streisand effect"],["Psychology","The IKEA effect"],["Statistics","Survivorship bias"],
+    ["Economics","The Lindy effect"],["Technology","The uncanny valley"],["Economics","The Gell-Mann amnesia effect"],
+    ["Psychology","The spotlight effect"],["Biology","The placebo versus nocebo effect"],["Physics","The observer effect"],
+    ["Philosophy","The Ship of Theseus in identity"],["Economics","Goodhart's law"],["Psychology","The Overton window"]
+  ];
+
   const drawBtn = document.getElementById('drawBtn');
   const startBtn = document.getElementById('startBtn');
   const card = document.getElementById('card');
@@ -540,24 +635,35 @@
   const prepSteps = Array.from(document.querySelectorAll('.prep-step'));
   const extendRow = document.getElementById('extendRow');
   const extendBtns = Array.from(document.querySelectorAll('.btn-extend'));
-
-  deckCount.textContent = TOPICS.length;
+  const modeToggle = document.getElementById('modeToggle');
+  const modeOffCuffBtn = document.getElementById('modeOffCuff');
+  const modeDeepResearchBtn = document.getElementById('modeDeepResearch');
 
   const CIRC = 2 * Math.PI * 84;
   ringProgress.setAttribute('stroke-dasharray', CIRC.toFixed(1));
 
-  const PREP_DURATION = 60;
-  const SPEAK_DURATION = 60;
+  const MODE_CONFIG = {
+    offcuff: { deck: TOPICS, prep: 60, speak: 60 },
+    deepresearch: { deck: DEEP_RESEARCH_TOPICS, prep: 600, speak: 60 }
+  };
   const PREP_LABELS = ['what / why', 'weigh it', 'land it'];
 
+  let deckMode = 'offcuff';
   let mode = 'idle'; // idle | drawn | prepping | readyToSpeak | speaking | paused | speakDone
-  let secondsLeft = SPEAK_DURATION;
-  let prepTotal = PREP_DURATION;
-  let speakTotal = SPEAK_DURATION;
+  let spinning = false;
+  let secondsLeft = MODE_CONFIG[deckMode].speak;
+  let prepTotal = MODE_CONFIG[deckMode].prep;
+  let speakTotal = MODE_CONFIG[deckMode].speak;
   let timerId = null;
-  let history = [];
+  let history = { offcuff: [], deepresearch: [] };
   let drawn = 0;
   let audioCtx = null;
+
+  function currentDeck(){
+    return MODE_CONFIG[deckMode].deck;
+  }
+
+  deckCount.textContent = currentDeck().length;
 
   function ensureAudio(){
     if(!audioCtx){
@@ -583,11 +689,13 @@
   }
 
   function pickTopic(){
-    let pool = TOPICS.map((t,i)=>i).filter(i => !history.includes(i));
-    if(pool.length === 0){ history = []; pool = TOPICS.map((t,i)=>i); }
+    const deck = currentDeck();
+    const hist = history[deckMode];
+    let pool = deck.map((t,i)=>i).filter(i => !hist.includes(i));
+    if(pool.length === 0){ hist.length = 0; pool = deck.map((t,i)=>i); }
     const idx = pool[Math.floor(Math.random()*pool.length)];
-    history.push(idx);
-    if(history.length > 20) history.shift();
+    hist.push(idx);
+    if(hist.length > 20) hist.shift();
     return idx;
   }
 
@@ -636,11 +744,12 @@
     prepPanel.classList.toggle('show', mode !== 'idle');
     drawBtn.disabled = ['prepping','readyToSpeak','speaking','paused'].includes(mode);
     extendRow.classList.toggle('show', mode !== 'idle' && mode !== 'speakDone');
+    modeToggle.classList.toggle('locked', mode !== 'idle' && mode !== 'speakDone');
     onair.classList.remove('live','prep');
 
     if(mode === 'idle' || mode === 'drawn'){
       startBtn.disabled = (mode === 'idle');
-      startBtn.textContent = 'Prepare';
+      startBtn.textContent = mode === 'drawn' ? ('Prepare (' + formatTime(prepTotal) + ')') : 'Prepare';
       startBtn.classList.remove('stop');
       onair.textContent = 'OFF AIR';
       timerLabel.textContent = 'ready';
@@ -680,23 +789,76 @@
   }
 
   function drawTopic(){
-    if(['prepping','speaking'].includes(mode)) return;
+    if(['prepping','speaking'].includes(mode) || spinning) return;
     ensureAudio();
     clearInterval(timerId);
+    spinning = true;
+
+    drawBtn.disabled = true;
+    startBtn.disabled = true;
+    extendRow.classList.remove('show');
+    prepPanel.classList.remove('show');
+    onair.textContent = 'OFF AIR';
+    onair.classList.remove('live','prep');
+    timerLabel.textContent = 'ready';
+
     const idx = pickTopic();
-    const [cat, text] = TOPICS[idx];
+    const deck = currentDeck();
+    const finalCat = deck[idx][0];
+    const finalText = deck[idx][1];
+
+    const wasFlipped = card.classList.contains('flip');
+    card.classList.add('spinning');
+    if(!wasFlipped) card.classList.add('flip');
+
+    const TOTAL_TICKS = 20;
+    let tick = 0;
+
+    function spinStep(){
+      const randIdx = Math.floor(Math.random() * deck.length);
+      categoryTag.textContent = deck[randIdx][0];
+      topicText.textContent = deck[randIdx][1];
+
+      topicText.classList.remove('spin-tick');
+      categoryTag.classList.remove('spin-tick');
+      void topicText.offsetWidth;
+      topicText.classList.add('spin-tick');
+      categoryTag.classList.add('spin-tick');
+
+      beep(320 + Math.random()*80, 0.03, 0, 'square', 0.045);
+
+      tick++;
+      if(tick < TOTAL_TICKS){
+        const progress = tick / TOTAL_TICKS;
+        const delay = 35 + Math.pow(progress, 2.4) * 260;
+        setTimeout(spinStep, delay);
+      } else {
+        landTopic(finalCat, finalText);
+      }
+    }
+
+    setTimeout(spinStep, wasFlipped ? 0 : 300);
+  }
+
+  function landTopic(cat, text){
     drawn++;
     categoryTag.textContent = cat;
     topicText.textContent = text;
     cardIndex.textContent = '#' + String(drawn).padStart(3,'0');
 
-    card.classList.remove('flip');
-    void card.offsetWidth;
-    requestAnimationFrame(()=>{ card.classList.add('flip'); });
+    topicText.classList.remove('spin-tick');
+    categoryTag.classList.remove('spin-tick');
+    topicText.classList.add('landed');
+    setTimeout(()=> topicText.classList.remove('landed'), 600);
 
-    secondsLeft = PREP_DURATION;
-    prepTotal = PREP_DURATION;
-    speakTotal = SPEAK_DURATION;
+    card.classList.remove('spinning');
+    beep(600, 0.14, 0, 'sine', 0.15);
+    beep(880, 0.18, 0.09, 'sine', 0.13);
+
+    spinning = false;
+    secondsLeft = MODE_CONFIG[deckMode].prep;
+    prepTotal = MODE_CONFIG[deckMode].prep;
+    speakTotal = MODE_CONFIG[deckMode].speak;
     timerDigits.textContent = formatTime(secondsLeft);
     setPrepRing(secondsLeft);
     mode = 'drawn';
@@ -733,8 +895,8 @@
 
   function goReadyToSpeak(){
     mode = 'readyToSpeak';
-    speakTotal = SPEAK_DURATION;
-    secondsLeft = SPEAK_DURATION;
+    speakTotal = MODE_CONFIG[deckMode].speak;
+    secondsLeft = MODE_CONFIG[deckMode].speak;
     timerDigits.textContent = formatTime(secondsLeft);
     setSpeakRing(secondsLeft);
     updateUI();
@@ -789,6 +951,34 @@
   extendBtns.forEach(btn=>{
     btn.addEventListener('click', ()=> extendTime(parseInt(btn.dataset.add, 10)));
   });
+
+  function selectDeckMode(newMode){
+    if(spinning) return;
+    if(!['idle','drawn','speakDone'].includes(mode)) return;
+    if(deckMode === newMode) return;
+
+    deckMode = newMode;
+    modeOffCuffBtn.classList.toggle('active', deckMode === 'offcuff');
+    modeDeepResearchBtn.classList.toggle('active', deckMode === 'deepresearch');
+    deckCount.textContent = currentDeck().length;
+
+    card.classList.remove('flip','spinning');
+    categoryTag.textContent = 'CATEGORY';
+    topicText.textContent = 'Topic goes here';
+    cardIndex.textContent = '';
+
+    mode = 'idle';
+    prepTotal = MODE_CONFIG[deckMode].prep;
+    speakTotal = MODE_CONFIG[deckMode].speak;
+    secondsLeft = MODE_CONFIG[deckMode].speak;
+    timerDigits.textContent = formatTime(prepTotal);
+    ringProgress.setAttribute('stroke-dashoffset', '0');
+    ringProgress.style.stroke = 'var(--go-green)';
+    updateUI();
+  }
+
+  modeOffCuffBtn.addEventListener('click', ()=> selectDeckMode('offcuff'));
+  modeDeepResearchBtn.addEventListener('click', ()=> selectDeckMode('deepresearch'));
 
   document.addEventListener('keydown', (e)=>{
     if(e.code === 'Space'){ e.preventDefault(); drawTopic(); }
